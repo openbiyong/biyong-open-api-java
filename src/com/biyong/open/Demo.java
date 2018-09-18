@@ -23,5 +23,6 @@ public class Demo {
     Map<String, String> params = new HashMap<>();
     params.put("openId", "d6485b5739e955ab1f6d9628216642ab");
     System.out.println(client.call("biyong-user/info", params));
+    // 其它接口调用参考 https://github.com/openbiyong/biyong-developer/blob/master/BiYong商户后台接口文档.md
   }
 }
