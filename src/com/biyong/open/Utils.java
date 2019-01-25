@@ -24,27 +24,27 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.DestroyFailedException;
 
 /**
- * BiYong 商户 API
- * version: java-1.0.0
- *
- * 参考文档
- *
- * https://en.wikipedia.org/wiki/RSA_(cryptosystem)
- * https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
- * https://docs.oracle.com/javase/7/docs/technotes/guides/security/StandardNames.html
+ * <p>BiYong 商户 API
+ * version: java-1.0.0</p>
+ * <p></p>
+ * <p>1. {@link Utils#newMsgId() newMsgId()} 随机生成 byte[16] msgId 的方法，商户可自己实现</p>
+ * <p>2. {@link Utils#createRsaKeyPair() createRsaKeyPair()} 生成秘钥对的方法</p>
+ * <p>3. {@link Message Message} 通信统一格式</p>
+ * <p>4. {@link Utils.MessageCipher MessageCipher} 通信加密封装</p>
+ * <p>5. {@link Utils.AES AES} AES加密封装</p>
+ * <p>6. {@link Utils.RSA RSA} RSA加密封装</p>
+ * <p></p>
+ * <p>参考资料</p>
+ * <p>1. <a href="https://en.wikipedia.org/wiki/RSA_(cryptosystem)">RSA加密</a></p>
+ * <p>2. <a href="https://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES加密</a></p>
+ * <p>3. <a href="https://docs.oracle.com/javase/7/docs/technotes/guides/security/StandardNames.html">JAVA加密文档</a></p>
  */
 public class Utils {
 
-  /**
-   * 随机生成 byte[16] msgId 的方法，商户可自己实现
-   */
   private static byte[] newMsgId() {
     return fromHex(UUID.randomUUID().toString().replace("-", ""));
   }
 
-  /**
-   * 生成秘钥对的方法
-   */
   private static void createRsaKeyPair() {
     RSA.KeyPair keyPair = RSA.KeyPair.create(2048); //推荐使用2048位RSA私钥
     System.out.println("私钥:");
@@ -53,7 +53,7 @@ public class Utils {
     System.out.println(keyPair.getPublic().toBase64String());
   }
 
-  public static class MerchantRequest {
+  public static class Message {
     long timestamp;
     byte[] msgId;
     AES.KEY aes;
@@ -87,17 +87,22 @@ public class Utils {
         String publicKey,
         String rsaSignHashMode,
         String aesMode) {
-      if (privateKey != null) {
-        this.privateKey = RSA.PrivateKey.fromBase64String(privateKey);
+      if (privateKey == null || privateKey.length() == 0) {
+        throw new RuntimeException("privateKey can not be null");
       }
-      if (publicKey != null) {
-        this.publicKey = RSA.PublicKey.fromBase64String(publicKey);
+      if (publicKey == null || publicKey.length() == 0) {
+        throw new RuntimeException("publicKey can not be null");
       }
+      if (rsaSignHashMode == null || rsaSignHashMode.length() == 0) {
+        throw new RuntimeException("rsaSignHashMode can not be null");
+      }
+      this.privateKey = RSA.PrivateKey.fromBase64String(privateKey);
+      this.publicKey = RSA.PublicKey.fromBase64String(publicKey);
       this.rsaSignHashMode = rsaSignHashMode;
       this.aesMode = aesMode;
     }
 
-    public MerchantRequest clientEncrypt(String dataString) {
+    public Message clientEncrypt(String dataString) {
       byte[] signedData = sign(
           concat(
               longToBytes(System.currentTimeMillis()),
@@ -129,8 +134,8 @@ public class Utils {
       return aesMode == null ? signedData : concat(new byte[1], aesEncrypt(signedData, aes));
     }
 
-    public MerchantRequest serverDecrypt(byte[] data) {
-      MerchantRequest r = serverAesDecrypt(data);
+    public Message serverDecrypt(byte[] data) {
+      Message r = serverAesDecrypt(data);
       r.data = verify(r.data);
       if (r.data != null) {
         r.timestamp = bytesToLong(r.data);
@@ -152,8 +157,8 @@ public class Utils {
       return publicKey.verify(data, sign, rsaSignHashMode) ? data : null;
     }
 
-    MerchantRequest clientAesEncrypt(byte[] signedData) {
-      MerchantRequest r = new MerchantRequest();
+    Message clientAesEncrypt(byte[] signedData) {
+      Message r = new Message();
       if (aesMode == null) {
         r.data = signedData;
       } else {
@@ -165,10 +170,10 @@ public class Utils {
       return r;
     }
 
-    MerchantRequest serverAesDecrypt(byte[] encryptedData) {
+    Message serverAesDecrypt(byte[] encryptedData) {
       if (aesMode == null) {
         // 未加密
-        MerchantRequest r = new MerchantRequest();
+        Message r = new Message();
         r.data = encryptedData;
         return r;
       } else {
@@ -184,8 +189,8 @@ public class Utils {
       return AES.createEncoder(aes.key, aes.iv, aesMode).encrypt(signedData);
     }
 
-    MerchantRequest aesDecrypt(byte[] aesEncryptedData, AES.KEY aes) {
-      MerchantRequest r = new MerchantRequest();
+    Message aesDecrypt(byte[] aesEncryptedData, AES.KEY aes) {
+      Message r = new Message();
       r.aes = aes;
       r.data = AES.createDecoder(r.aes.key, r.aes.iv, aesMode).decrypt(aesEncryptedData);
       return r;

@@ -12,6 +12,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
+/**
+ * <p>Http 通信封装</p>
+ * <p></p>
+ * <p>1. {@link HttpClient#toJSONString(Map) toJSONString(Map)} 将Map&lt;String, String&gt;转换为字符串</p>
+ * <p>2. {@link HttpClient#call(String, Map) call(String, Map)} 发起请求</p>
+ */
 public class HttpClient extends MessageCipher {
   private static final String client = "java-1.0.0";
   private String appId;
@@ -36,6 +42,11 @@ public class HttpClient extends MessageCipher {
     return call(api, null);
   }
 
+  /**
+   * @param api api路径
+   * @param params 参数
+   * @return JSON格式接口返回值
+   */
   public String call(String api, Map<String, String> params) {
     try {
       HttpURLConnection connection = (HttpURLConnection) new URL(biyongServerUrl + api).openConnection();
@@ -49,7 +60,7 @@ public class HttpClient extends MessageCipher {
       connection.setReadTimeout(5000);
       connection.setDoOutput(true);
       DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-      Utils.MerchantRequest r = clientEncrypt(toJSONString(params));
+      Utils.Message r = clientEncrypt(toJSONString(params));
       wr.write(r.getData());
       wr.flush();
       wr.close();
